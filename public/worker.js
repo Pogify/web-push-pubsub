@@ -11,11 +11,7 @@ self.addEventListener('push', function (e) {
   console.log("Background worker received event");
 
   e.waitUntil((async () => {
-    self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(all => {
-      all.forEach(client => {
-        const swListener = new BroadcastChannel('worker_pipe');
-        swListener.postMessage(body);
-      });
-    });
+    const swListener = new BroadcastChannel('worker_pipe');
+    swListener.postMessage(body);
   })());
 });
