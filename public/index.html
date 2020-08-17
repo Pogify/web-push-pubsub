@@ -1,0 +1,7 @@
+<script src="./app.js"></script>
+<pre>
+var id = Date.now().toString();
+await startStream(id);
+await subscribeUser(id);
+await sendEvent(id, {message: "test data"});
+</pre>
