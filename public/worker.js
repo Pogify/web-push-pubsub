@@ -9,7 +9,7 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('push', function (e) {
   var body = JSON.parse(e.data.text());
   e.waitUntil((async () => {
-    const swListener = new BroadcastChannel('worker_pipe');
-    swListener.postMessage(body);
+    const swListener = new BroadcastChannel(`worker_pipe_${body.id}`);
+    swListener.postMessage(body.data);
   })());
 });

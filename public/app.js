@@ -1,78 +1,28 @@
-function getServiceWorker() {
-  return new Promise((resolve, error) => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
-        resolve(reg);
-      });
-    } else {
-      resolve();
-    }
-  });
-}
+navigator.serviceWorker.register('./worker.js').then(w => w.update());
 
-var receiveEvent = () => { };
-
-window.onload = () => {
-  navigator.serviceWorker.register('./worker.js').then(worker => {
-    worker.update().then(worker => {
-      const swListener = new BroadcastChannel('worker_pipe');
-      swListener.onmessage = e => receiveEvent(e.data);
+async function twitchLogin() {
+    return fetch("/username").then(t => t.text()).then(username => {
+        return new Promise((res, rej) => {
+            if (username != "") {
+                res();
+            }
+            else {
+                var login = window.open("/auth/twitch");
+                login.onunload = async () => {
+                    if (login.closed) {
+                        twitchLogin().then(() => res());
+                    }
+                };
+            }
+        });
     });
-  });
 }
 
-function startStream(id) {
-  return fetch("/start", {
-    method: "post",
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ stream: id })
-  });
+async function startStreamerSession(data) {
+    return twitchLogin().then(() => new WebPushStreamer(data));
 }
 
-function sendEvent(id, payload) {
-  return fetch("/update", {
-    method: "post",
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ stream: id, payload: payload })
-  });
-}
-
-function subscribeUser(id) {
-  return getServiceWorker().then(reg => {
-    return fetch("/vapid").then(r => r.text()).then(vapid => {
-      return reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapid
-      }).then((sub) => {
-        return fetch("/subscribe", {
-          method: "post",
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ stream: id, credentials: sub })
-        }).then(r => r.json());
-      }).catch((e) => {
-        if (Notification.permission === 'denied') {
-          console.warn('Permission for notifications was denied');
-        } else {
-          console.error('Unable to subscribe to push', e);
-        }
-      });
-    });
-  });
-}
-
-function unsubscribe() {
-  getServiceWorker().then(reg => {
-    reg.pushManager.getSubscription().then(sub => {
-      return sub.unsubscribe();
-    });
-  });
+async function startViewerSession(id) {
+    var con = new WebPushViewer(id);
+    return Promise.resolve(con);
 }

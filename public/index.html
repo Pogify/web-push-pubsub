@@ -1,10 +1,33 @@
-<script src="./app.js"></script>
-<pre>
-function receiveEvent(data) {
-    console.log("Client received data:", data);
-}
-var id = Date.now().toString();
-await startStream(id);
-await subscribeUser(id);
-await sendEvent(id, {message: "test data"});
+<script src="./WebPushStreamer.js"></script>
+<script src="./WebPushViewer.js"></script>
+
+<h2>Start a stream</h2>
+<pre id="streamerSourceCode">
+var streamer = await startStreamerSession();
+await streamer.startStream({
+    song: "song name",
+    timestamp_sec: 69,
+    event_timestamp: Date.now(),
+    state: "paused"
+});
 </pre>
+
+<h2>Subscribe to updates (can do it from a different tab)</h2>
+<pre id="viewerSourceCode">
+var viewer = await startViewerSession("username");
+await viewer.subscribeUser(
+    d => console.log("Received data:", d)
+);
+</pre>
+
+<h2>Send an update</h2>
+<pre>
+await streamer.sendEvent({
+    song: "new song name",
+    timestamp_sec: 420,
+    event_timestamp: Date.now(),
+    state: "playing"
+});
+</pre>
+
+<script src="./app.js"></script>
