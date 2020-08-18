@@ -8,8 +8,6 @@ self.addEventListener('activate', function (event) {
 
 self.addEventListener('push', function (e) {
   var body = JSON.parse(e.data.text());
-  console.log("Background worker received event");
-
   e.waitUntil((async () => {
     const swListener = new BroadcastChannel('worker_pipe');
     swListener.postMessage(body);

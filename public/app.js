@@ -10,13 +10,13 @@ function getServiceWorker() {
   });
 }
 
+var receiveEvent = () => { };
+
 window.onload = () => {
   navigator.serviceWorker.register('./worker.js').then(worker => {
     worker.update().then(worker => {
       const swListener = new BroadcastChannel('worker_pipe');
-      swListener.onmessage = function (e) {
-        console.log("Client site received event:", e.data);
-      };
+      swListener.onmessage = e => receiveEvent(e.data);
     });
   });
 }

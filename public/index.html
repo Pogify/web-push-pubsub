@@ -1,5 +1,8 @@
 <script src="./app.js"></script>
 <pre>
+function receiveEvent(data) {
+    console.log("Client received data:", data);
+}
 var id = Date.now().toString();
 await startStream(id);
 await subscribeUser(id);
