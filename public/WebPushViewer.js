@@ -18,7 +18,7 @@ class WebPushViewer {
 
     subscribeUser(callback) {
         this.pipe.onmessage = d => {
-            callback(d);
+            callback(d.data);
         };
         return this.getServiceWorker().then(reg => {
             return fetch("/vapid").then(r => r.text()).then(vapid => {

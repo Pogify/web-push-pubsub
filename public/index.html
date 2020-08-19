@@ -16,12 +16,33 @@ await streamer.startStream({
 <pre id="viewerSourceCode">
 var viewer = await startViewerSession("username");
 await viewer.subscribeUser(
-    d => console.log("Received data:", d)
+    d => console.log("Received data:", )
 );
 </pre>
 
 <h2>Send an update</h2>
 <pre>
+await streamer.sendEvent({
+    song: "new song name",
+    timestamp_sec: 420,
+    event_timestamp: Date.now(),
+    state: "playing"
+});
+</pre>
+
+<h2>Example</h2>
+<pre>
+var streamer = await startStreamerSession();
+await streamer.startStream({
+    song: "song name",
+    timestamp_sec: 69,
+    event_timestamp: Date.now(),
+    state: "paused"
+});
+var viewer = await startViewerSession("kento24gs");
+await viewer.subscribeUser(
+    d => console.log("Received data:", d)
+);
 await streamer.sendEvent({
     song: "new song name",
     timestamp_sec: 420,

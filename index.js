@@ -70,8 +70,7 @@ app.post("/start", (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
   if (id in streams) {
-    res.status(403);
-    res.send({ message: "Stream already exists" });
+    res.send({ message: "Successfully connected to existing stream" });
   } else {
     streams[id] = {
       subscribers: new Set(),
