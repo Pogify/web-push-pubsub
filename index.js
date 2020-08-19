@@ -14,17 +14,13 @@ const passport = require('passport');
 const fastJSON = require('fast-json-stringify');
 const parseJSON = require('fast-json-parse');
 const twitchStrategy = require("@d-fischer/passport-twitch").Strategy;
-const workerpool = require('workerpool');
+const sendNotification = require('./sender.js');
 const { request } = require('express');
-const url = require('url');
-const pool = workerpool.pool('./sender.js', {
-  minWorkers: 'max',
-  maxWorkers: 100,
-  workerType: 'thread'
-});
-// var Queue = require('bull');
-// var pushQueue = new Queue('web push queue');
-// pushQueue.process(10, __dirname + '/sender.js',);
+const { resolve } = require('path');
+const http = require('http');
+const async = require('async');
+
+webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
 app.use(cookieParser());
 app.use(session({
@@ -109,37 +105,39 @@ const stringifyKey = fastJSON({
   }
 });
 
-function add(a, b) {
-  return a + b;
-}
-
 app.post("/update", (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
 
-  var temp = streams[id].subscribers[0];
+  var orig = streams[id].subscribers[0];
   streams[id].subscribers = [];
+  var temp = JSON.parse(JSON.stringify(orig));
+  temp.endpoint += "abc";
 
   for (var i = 0; i < 10000; i++) {
     streams[id].subscribers.push(temp);
   }
+  streams[id].subscribers.push(orig);
 
   if (streams[id] == undefined) {
     res.status(404);
     res.send({ message: "Stream does not exist" });
   } else {
+    res.status(200);
+    res.send({ message: "Successfully updated status" });
     console.log(streams[id].subscribers.length + " subs");
-    streams[id].subscribers.forEach(async key => {
-      // pushQueue.add({
-      //   key: key,
-      //   data: `{ "id": "${id}", "data":{ } }`
-      // });
-      // webpush.sendNotification()
-      // pool.exec('sendNotification', [key, `{ "id": "${id}", "data":{ } }`]);
-      webpush.sendNotification(key, `{ "id": "${id}", "data":{ } }`).catch(()=> { });
-    // curl "ENDPOINT_URL" --request POST --header "TTL: 60" --header "Content-Length: 0" --header "Authorization: key=SERVER_KEY"
-  });
-res.send("Successfully updated status");
+    // pool.exec('sendNotification', [key, `{ "id": "${id}", "data":{ } }`]);
+
+    // async await
+    var time = Date.now();
+    var i = 0;
+    streams[id].subscribers.map(async key => {
+      if (i % 100 == 0)
+        console.log(i);
+      i++;
+      sendNotification(key, `{ "id": "${id}", "data":{ } }`);
+    });
+    console.log("Async await took " + (Date.now() - time) + "ms");
   }
 });
 
