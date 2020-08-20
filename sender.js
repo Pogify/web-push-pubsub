@@ -1,13 +1,17 @@
+const workerpool = require('workerpool');
 // const webpush = require('web-push');
 const url = require('url');
 const https = require('https');
-const vapid = require('./secrets/vapid.js');
+// const vapid = require('./secrets/vapid.js');
 const encryptionHelper = require('./node_modules/web-push/src/encryption-helper.js');
 // const webPushConstants = require('./node_modules/web-push/src/web-push-constants.js');
 const vapidHelper = require('./node_modules/web-push/src/vapid-helper.js');
-const workerpool = require('workerpool');
 
-async function sendNotification(subscription, payload, options) {
+
+async function sendNotification(
+  subscription, payload,
+  vapid, options
+) {
   // var time = Date.now();
 
   var encoding = 'aes128gcm';
@@ -57,9 +61,7 @@ async function sendNotification(subscription, payload, options) {
   httpsOptions.headers = requestDetails.headers;
   httpsOptions.method = requestDetails.method;
 
-  if (requestDetails.timeout) {
-    httpsOptions.timeout = requestDetails.timeout;
-  }
+  // requestDetails.timeout = httpsOptions.timeout = 1000;
 
   if (requestDetails.agent) {
     httpsOptions.agent = requestDetails.agent;
@@ -73,6 +75,12 @@ async function sendNotification(subscription, payload, options) {
   const pushRequest = https.request(httpsOptions, () => {
     pushRequest.destroy();
   });
+
+  if (requestDetails.timeout) {
+    pushRequest.on('timeout', function () {
+      pushRequest.destroy();
+    });
+  }
 
   if (requestDetails.body) {
     pushRequest.write(requestDetails.body);

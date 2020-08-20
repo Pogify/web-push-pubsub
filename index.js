@@ -19,6 +19,8 @@ const workerpool = require('workerpool');
 const pool = workerpool.pool(__dirname + "/sender.js", {
   minWorkers: 'max'
 });
+const async = require('async');
+
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -114,7 +116,7 @@ app.post("/update", (req, res) => {
   var temp = JSON.parse(JSON.stringify(orig));
   temp.endpoint += Date.now();
 
-  for (var i = 0; i < 1000; i++) {
+  for (var i = 0; i < 2500; i++) {
     streams[id].subscribers.push(temp);
   }
   streams[id].subscribers.push(orig);
@@ -129,18 +131,16 @@ app.post("/update", (req, res) => {
 
     var arr = streams[id].subscribers;
     var length = arr.length;
+    // var funcs = [];
     for (var i = 0; i < length; i++) {
-      if (i % 100 == 0) {
-        console.log(i);
-      }
+      // sendNotification is found in ./sender.js
       pool.exec("sendNotification", [
-        arr[i], `{ "id": "${id}", "data":{ } }`
+        arr[i],
+        `{ "id": "${id}", "data":{ } }`,
+        vapid
       ]).catch(e => {
-        //console.log(e);
       });
     }
-
-    // console.log("Async await took " + (Date.now() - time) + "ms");
   }
 });
 
