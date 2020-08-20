@@ -15,10 +15,10 @@ const fastJSON = require('fast-json-stringify');
 const parseJSON = require('fast-json-parse');
 const twitchStrategy = require("@d-fischer/passport-twitch").Strategy;
 const sendNotification = require('./sender.js');
-const { request } = require('express');
-const { resolve } = require('path');
-const http = require('http');
-const async = require('async');
+const workerpool = require('workerpool');
+const pool = workerpool.pool(__dirname + "/sender.js", {
+  minWorkers: 'max'
+});
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -112,9 +112,9 @@ app.post("/update", (req, res) => {
   var orig = streams[id].subscribers[0];
   streams[id].subscribers = [];
   var temp = JSON.parse(JSON.stringify(orig));
-  temp.endpoint += "abc";
+  temp.endpoint += Date.now();
 
-  for (var i = 0; i < 10000; i++) {
+  for (var i = 0; i < 1000; i++) {
     streams[id].subscribers.push(temp);
   }
   streams[id].subscribers.push(orig);
@@ -126,18 +126,21 @@ app.post("/update", (req, res) => {
     res.status(200);
     res.send({ message: "Successfully updated status" });
     console.log(streams[id].subscribers.length + " subs");
-    // pool.exec('sendNotification', [key, `{ "id": "${id}", "data":{ } }`]);
 
-    // async await
-    var time = Date.now();
-    var i = 0;
-    streams[id].subscribers.map(async key => {
-      if (i % 100 == 0)
+    var arr = streams[id].subscribers;
+    var length = arr.length;
+    for (var i = 0; i < length; i++) {
+      if (i % 100 == 0) {
         console.log(i);
-      i++;
-      sendNotification(key, `{ "id": "${id}", "data":{ } }`);
-    });
-    console.log("Async await took " + (Date.now() - time) + "ms");
+      }
+      pool.exec("sendNotification", [
+        arr[i], `{ "id": "${id}", "data":{ } }`
+      ]).catch(e => {
+        //console.log(e);
+      });
+    }
+
+    // console.log("Async await took " + (Date.now() - time) + "ms");
   }
 });
 
