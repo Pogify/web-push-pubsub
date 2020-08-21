@@ -28,6 +28,7 @@
     "fast-json-stringify": "^2.2.3",
     "jws": "^4.0.0",
     "passport": "^0.4.1",
+    "redis": "^3.0.2",
     "url": "^0.11.0",
     "web-push": "^3.4.4",
     "workerpool": "^6.0.0"

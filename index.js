@@ -15,12 +15,21 @@ const fastJSON = require('fast-json-stringify');
 const parseJSON = require('fast-json-parse');
 const twitchStrategy = require("@d-fischer/passport-twitch").Strategy;
 const sendNotification = require('./sender.js');
+const redis = require("redis");
+const { promisify } = require("util");
 // const workerpool = require('workerpool');
 // const pool = workerpool.pool(__dirname + "/sender.js", {
 //   minWorkers: 'max'
 // });
 const async = require('async');
 
+const client1 = redis.createClient();
+const client2 = redis.createClient();
+const client3 = redis.createClient();
+
+const del_redis = promisify(client1.del).bind(client1);
+const sadd_redis = promisify(client2.sadd).bind(client2);
+const pub_redis = promisify(client3.publish).bind(client3);
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -75,7 +84,7 @@ app.get("/username", (req, res) => {
 
 var streams = {};
 
-app.post("/start", (req, res) => {
+app.post("/start", async (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
   if (streams[id] != undefined) {
@@ -85,6 +94,7 @@ app.post("/start", (req, res) => {
       subscribers: [], // new Set(),
       data: data
     };
+    await del_redis(`${id}`);
     res.send({ "message": "Successfully started stream" });
   }
 });
@@ -107,7 +117,7 @@ const stringifyKey = fastJSON({
   }
 });
 
-app.post("/update", (req, res) => {
+app.post("/update", async (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
 
@@ -132,6 +142,7 @@ app.post("/update", (req, res) => {
     var arr = streams[id].subscribers;
     var length = arr.length;
     // var funcs = [];
+    await pub_redis("new data", `${id}`);
     for (var i = 0; i < length; i++) {
       // sendNotification is found in ./sender.js
       // pool.exec("sendNotification", [
@@ -152,7 +163,7 @@ app.post("/update", (req, res) => {
   }
 });
 
-app.post("/subscribe", (req, res) => {
+app.post("/subscribe", async (req, res) => {
   var id = req.body.stream;
   var key = req.body.credentials;
   if (streams[id] == undefined) {
@@ -160,6 +171,7 @@ app.post("/subscribe", (req, res) => {
     res.send({ message: "Stream does not exist" });
   } else {
     streams[id].subscribers.push(key);
+    await sadd_redis(`${id}`, JSON.stringify(key));
     res.send({
       message: "Successfully subscribed user",
       data: streams[id].data
