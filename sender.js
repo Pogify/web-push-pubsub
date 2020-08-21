@@ -13,7 +13,6 @@ async function sendNotification(
   vapid, options
 ) {
   // var time = Date.now();
-
   var encoding = 'aes128gcm';
   const urlParts = url.parse(subscription.endpoint);
   const audience = urlParts.protocol + '//'

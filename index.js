@@ -111,15 +111,15 @@ app.post("/update", (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
 
-  var orig = streams[id].subscribers[0];
-  streams[id].subscribers = [];
-  var temp = JSON.parse(JSON.stringify(orig));
-  temp.endpoint += Date.now();
+  // var orig = streams[id].subscribers[0];
+  // streams[id].subscribers = [];
+  // var temp = JSON.parse(JSON.stringify(orig));
+  // // temp.endpoint += Date.now();
 
-  for (var i = 0; i < 2500; i++) {
-    streams[id].subscribers.push(temp);
-  }
-  streams[id].subscribers.push(orig);
+  // for (var i = 1; i < 10000; i++) {
+  //   streams[id].subscribers.push(temp);
+  // }
+  // streams[id].subscribers.push(orig);
 
   if (streams[id] == undefined) {
     res.status(404);
@@ -136,9 +136,13 @@ app.post("/update", (req, res) => {
       // sendNotification is found in ./sender.js
       pool.exec("sendNotification", [
         arr[i],
-        `{ "id": "${id}", "data":{ } }`,
+        JSON.stringify({
+          id: id,
+          data: data
+        }),
         vapid
       ]).catch(e => {
+        console.log(e);
       });
     }
   }
