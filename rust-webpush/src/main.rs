@@ -3,6 +3,7 @@ use redis::{Commands, RedisResult};
 
 #[macro_use] extern crate lazy_static;
 
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tokio::task;
 use web_push::{
@@ -35,6 +36,7 @@ struct Viewer {
     keys: Keys,
 }
 
+
 impl redis::FromRedisValue for Viewer {
     fn from_redis_value(v: &redis::Value) -> RedisResult<Viewer> {
         let res: String = String::from_redis_value(v).unwrap();
@@ -58,14 +60,14 @@ fn create_redis_connection(client: &redis::Client) -> RedisResult<redis::Connect
 fn pubsub_stuff() -> RedisResult<String> {
     let mut con = create_redis_connection(&redis_client)?;
     let mut pubsub = con.as_pubsub();
-    pubsub.subscribe("channel_1")?;
+    pubsub.subscribe("new data")?;
     let msg = pubsub.get_message()?;
     let payload: String = msg.get_payload()?;
     Ok(payload)
 }
 
 
-async fn send_to_viewer(viewer: &Viewer) -> Result<(), WebPushError>{
+async fn send_to_viewer(viewer: &Viewer, data: &str) -> Result<(), WebPushError>{
     let subscription_info = SubscriptionInfo::new(
         &viewer.endpoint,
         &viewer.keys.p256dh,
@@ -78,8 +80,8 @@ async fn send_to_viewer(viewer: &Viewer) -> Result<(), WebPushError>{
     let signature = sig_builder.build()?;
 
     let mut builder = WebPushMessageBuilder::new(&subscription_info)?;
-    let content = "Hello there".as_bytes();
-    builder.set_payload(ContentEncoding::AesGcm, content);
+    // let content = "Hello there".as_bytes();
+    builder.set_payload(ContentEncoding::AesGcm, data.as_bytes());
     builder.set_vapid_signature(signature);
 
     let response = push_client.send(builder.build().unwrap()).await?;
@@ -88,13 +90,38 @@ async fn send_to_viewer(viewer: &Viewer) -> Result<(), WebPushError>{
 }
 
 
+async fn push_to_all(id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut conn = create_redis_connection(&redis_client)?;
+    let viewers: Vec<Viewer> = conn.smembers(id)?;
+    let payload: String = conn.get(format!("data:{}", id))?;
+    let mut promises = Vec::new();
+    for viewer in &viewers {
+        promises.push(send_to_viewer(&viewer, &payload));
+    }
+    join_all(promises).await;
+    Ok(())
+}
+
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello world");
-    let res: Vec<Viewer> = create_redis_connection(&redis_client)?.smembers("ar2d2bb8").unwrap();
-    for viewer in &res {
-        send_to_viewer(&viewer).await?;
-        println!("{:?}", viewer);
+    // let res: Vec<Viewer> = create_redis_connection(&redis_client)?.smembers("ar2d2bb8")?;
+    // let data: String = create_redis_connection(&redis_client)?.get("data:ar2d2bb8")?;
+    // for viewer in &res {
+    //     send_to_viewer(&viewer, &data).await?;
+    //     println!("{:?}", viewer);
+    // }
+    loop {
+        match pubsub_stuff() {
+            Ok(id) => {
+                task::spawn( async move {
+                    push_to_all(&id).await;
+                });
+                Ok(())
+            },
+            Err(e) => Err(e)
+        };
     }
     Ok(())
 }

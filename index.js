@@ -26,10 +26,12 @@ const async = require('async');
 const client1 = redis.createClient();
 const client2 = redis.createClient();
 const client3 = redis.createClient();
+const client4 = redis.createClient();
 
 const del_redis = promisify(client1.del).bind(client1);
 const sadd_redis = promisify(client2.sadd).bind(client2);
 const pub_redis = promisify(client3.publish).bind(client3);
+const set_redis = promisify(client4.set).bind(client4);
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -95,6 +97,7 @@ app.post("/start", async (req, res) => {
       data: data
     };
     await del_redis(`${id}`);
+    await set_redis(`data:${id}`, JSON.stringify(data));
     res.send({ "message": "Successfully started stream" });
   }
 });
@@ -142,6 +145,7 @@ app.post("/update", async (req, res) => {
     var arr = streams[id].subscribers;
     var length = arr.length;
     // var funcs = [];
+    await set_redis(`data:${id}`, JSON.stringify(data));
     await pub_redis("new data", `${id}`);
     for (var i = 0; i < length; i++) {
       // sendNotification is found in ./sender.js
