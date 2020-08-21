@@ -15,10 +15,10 @@ const fastJSON = require('fast-json-stringify');
 const parseJSON = require('fast-json-parse');
 const twitchStrategy = require("@d-fischer/passport-twitch").Strategy;
 const sendNotification = require('./sender.js');
-const workerpool = require('workerpool');
-const pool = workerpool.pool(__dirname + "/sender.js", {
-  minWorkers: 'max'
-});
+// const workerpool = require('workerpool');
+// const pool = workerpool.pool(__dirname + "/sender.js", {
+//   minWorkers: 'max'
+// });
 const async = require('async');
 
 

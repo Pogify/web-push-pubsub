@@ -1,4 +1,4 @@
-const workerpool = require('workerpool');
+// const workerpool = require('workerpool');
 // const webpush = require('web-push');
 const url = require('url');
 const https = require('https');
@@ -89,6 +89,6 @@ async function sendNotification(
 
 module.exports = sendNotification;
 
-workerpool.worker({
-  sendNotification: sendNotification
-});
+// workerpool.worker({
+//   sendNotification: sendNotification
+// });
