@@ -134,16 +134,20 @@ app.post("/update", (req, res) => {
     // var funcs = [];
     for (var i = 0; i < length; i++) {
       // sendNotification is found in ./sender.js
-      pool.exec("sendNotification", [
-        arr[i],
-        JSON.stringify({
-          id: id,
-          data: data
-        }),
-        vapid
-      ]).catch(e => {
-        console.log(e);
-      });
+      // pool.exec("sendNotification", [
+      //   arr[i],
+      //   JSON.stringify({
+      //     id: id,
+      //     data: data
+      //   }),
+      //   vapid
+      // ]).catch(e => {
+      //   console.log(e);
+      // });
+      webpush.sendNotification(arr[i], JSON.stringify({
+        id: id,
+        data: data
+      }));
     }
   }
 });
