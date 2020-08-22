@@ -68,7 +68,12 @@ fn pubsub_stuff() -> RedisResult<String> {
 }
 
 
-async fn send_to_viewer(viewer: &Viewer, data: &str) -> Result<(), WebPushError>{
+async fn send_to_viewer(
+    viewer: &Viewer,
+    data: &str, 
+    id: &str)
+-> Result<(), WebPushError>{
+
     let subscription_info = SubscriptionInfo::new(
         &viewer.endpoint,
         &viewer.keys.p256dh,
@@ -81,23 +86,27 @@ async fn send_to_viewer(viewer: &Viewer, data: &str) -> Result<(), WebPushError>
     let signature = sig_builder.build()?;
 
     let mut builder = WebPushMessageBuilder::new(&subscription_info)?;
-    // let content = "Hello there".as_bytes();
     builder.set_payload(ContentEncoding::AesGcm, data.as_bytes());
     builder.set_vapid_signature(signature);
 
-    let response = push_client.send(builder.build().unwrap()).await?;
-    println!("Got response {:?}", response);
-    Ok(())
+    // If the send was successful, keep the user, else, yeet the user
+    match push_client.send(builder.build().unwrap()).await {
+        Ok(res) => Ok(()),
+        Err(e) => {
+            create_redis_connection(&redis_client).unwrap().srem(id, serde_json::to_string(viewer)?).unwrap_or(());
+            Err(WebPushError::EndpointNotValid)
+        }
+    }
 }
 
 
-async fn push_to_all(id: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn push_to_all(id: String) -> RedisResult<()> {
     let mut conn = create_redis_connection(&redis_client)?;
     let viewers: Vec<Viewer> = conn.smembers(&id)?;
     let payload: String = conn.get(format!("data:{}", id))?;
     let mut promises = Vec::new();
     for viewer in &viewers {
-        promises.push(send_to_viewer(&viewer, &payload));
+        promises.push(send_to_viewer(&viewer, &payload, &id));
     }
     join_all(promises).await;
     Ok(())
@@ -110,7 +119,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         match pubsub_stuff() {
             Ok(id) => {
-                println!("Notifying viewers of {}", id);
                 let handle = Handle::current();
                 handle.spawn( async {
                     push_to_all(id).await;
