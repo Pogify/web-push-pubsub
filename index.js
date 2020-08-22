@@ -147,23 +147,23 @@ app.post("/update", async (req, res) => {
     // var funcs = [];
     await set_redis(`data:${id}`, JSON.stringify(data));
     await pub_redis("new data", `${id}`);
-    for (var i = 0; i < length; i++) {
-      // sendNotification is found in ./sender.js
-      // pool.exec("sendNotification", [
-      //   arr[i],
-      //   JSON.stringify({
-      //     id: id,
-      //     data: data
-      //   }),
-      //   vapid
-      // ]).catch(e => {
-      //   console.log(e);
-      // });
-      webpush.sendNotification(arr[i], JSON.stringify({
-        id: id,
-        data: data
-      }));
-    }
+    // for (var i = 0; i < length; i++) {
+    //   // sendNotification is found in ./sender.js
+    //   // pool.exec("sendNotification", [
+    //   //   arr[i],
+    //   //   JSON.stringify({
+    //   //     id: id,
+    //   //     data: data
+    //   //   }),
+    //   //   vapid
+    //   // ]).catch(e => {
+    //   //   console.log(e);
+    //   // });
+    //   webpush.sendNotification(arr[i], JSON.stringify({
+    //     id: id,
+    //     data: data
+    //   }));
+    // }
   }
 });
 

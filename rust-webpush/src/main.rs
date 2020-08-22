@@ -5,6 +5,7 @@ use redis::{Commands, RedisResult};
 
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
+use tokio::runtime::Handle;
 use tokio::task;
 use web_push::{
     ContentEncoding,
@@ -90,9 +91,9 @@ async fn send_to_viewer(viewer: &Viewer, data: &str) -> Result<(), WebPushError>
 }
 
 
-async fn push_to_all(id: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn push_to_all(id: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = create_redis_connection(&redis_client)?;
-    let viewers: Vec<Viewer> = conn.smembers(id)?;
+    let viewers: Vec<Viewer> = conn.smembers(&id)?;
     let payload: String = conn.get(format!("data:{}", id))?;
     let mut promises = Vec::new();
     for viewer in &viewers {
@@ -106,17 +107,13 @@ async fn push_to_all(id: &str) -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello world");
-    // let res: Vec<Viewer> = create_redis_connection(&redis_client)?.smembers("ar2d2bb8")?;
-    // let data: String = create_redis_connection(&redis_client)?.get("data:ar2d2bb8")?;
-    // for viewer in &res {
-    //     send_to_viewer(&viewer, &data).await?;
-    //     println!("{:?}", viewer);
-    // }
     loop {
         match pubsub_stuff() {
             Ok(id) => {
-                task::spawn( async move {
-                    push_to_all(&id).await;
+                println!("Notifying viewers of {}", id);
+                let handle = Handle::current();
+                handle.spawn( async {
+                    push_to_all(id).await;
                 });
                 Ok(())
             },

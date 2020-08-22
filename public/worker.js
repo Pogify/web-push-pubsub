@@ -15,3 +15,5 @@ self.addEventListener('push', function (e) {
     swListener.postMessage(body.data);
   })());
 });
+
+console.log("Added event listeners");
