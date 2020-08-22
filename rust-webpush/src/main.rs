@@ -74,8 +74,6 @@ async fn send_to_viewer(
     id: &str)
 -> Result<(), WebPushError>{
 
-    println!("Sending to {} from {}'s stream", viewer.endpoint, id);
-
     let subscription_info = SubscriptionInfo::new(
         &viewer.endpoint,
         &viewer.keys.p256dh,
@@ -88,23 +86,18 @@ async fn send_to_viewer(
     sig_builder.add_claim("sub", "mailto:kento24gs@outlook.com");
     let signature = sig_builder.build()?;
 
-    println!("starting builder");
-
     let mut builder = WebPushMessageBuilder::new(&subscription_info)?;
     builder.set_payload(ContentEncoding::AesGcm, data.as_bytes());
     builder.set_vapid_signature(signature);
 
-    println!("Initiating send request");
     // If the send was successful, keep the user, else, yeet the user
     let response = match push_client.send(builder.build().unwrap()).await {
-        Ok(res) => {println!("Success"); Ok(())},
+        Ok(res) => Ok(()),
         Err(e) => {
-            // create_redis_connection(&redis_client).unwrap().srem(id, serde_json::to_string(viewer)?).unwrap_or(());
-            println!("Got error {:?}", e);
+            create_redis_connection(&redis_client).unwrap().srem(id, serde_json::to_string(viewer)?).unwrap_or(());
             Err(WebPushError::EndpointNotValid)
         }
     };
-    println!("Finished send request handling");
     response
 }
 
@@ -128,11 +121,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         match pubsub_stuff() {
             Ok(id) => {
-                println!("It is time for revolution.");
                 let handle = Handle::current();
                 handle.spawn( async {
                     push_to_all(id).await;
-                    println!("done with handle task");
                 });
                 Ok(())
             },

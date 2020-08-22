@@ -27,11 +27,13 @@ const client1 = redis.createClient();
 const client2 = redis.createClient();
 const client3 = redis.createClient();
 const client4 = redis.createClient();
+const client5 = redis.createClient();
 
 const del_redis = promisify(client1.del).bind(client1);
 const sadd_redis = promisify(client2.sadd).bind(client2);
 const pub_redis = promisify(client3.publish).bind(client3);
 const set_redis = promisify(client4.set).bind(client4);
+const get_redis = promisify(client5.set).bind(client5);
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -143,27 +145,8 @@ app.post("/update", async (req, res) => {
     console.log(streams[id].subscribers.length + " subs");
 
     var arr = streams[id].subscribers;
-    var length = arr.length;
-    // var funcs = [];
     await set_redis(`data:${id}`, JSON.stringify(data));
     await pub_redis("new data", `${id}`);
-    // for (var i = 0; i < length; i++) {
-    //   // sendNotification is found in ./sender.js
-    //   // pool.exec("sendNotification", [
-    //   //   arr[i],
-    //   //   JSON.stringify({
-    //   //     id: id,
-    //   //     data: data
-    //   //   }),
-    //   //   vapid
-    //   // ]).catch(e => {
-    //   //   console.log(e);
-    //   // });
-    //   webpush.sendNotification(arr[i], JSON.stringify({
-    //     id: id,
-    //     data: data
-    //   }));
-    // }
   }
 });
 
@@ -178,7 +161,7 @@ app.post("/subscribe", async (req, res) => {
     await sadd_redis(`${id}`, JSON.stringify(key));
     res.send({
       message: "Successfully subscribed user",
-      data: streams[id].data
+      data: await get_redis(`data:${id}`)
     });
   }
 });
