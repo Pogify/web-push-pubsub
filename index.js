@@ -54,7 +54,7 @@ app.use(passport.session());
 passport.use(new twitchStrategy({
   clientID: twitch.clientID,
   clientSecret: twitch.clientSecret,
-  callbackURL: "http://localhost:8000/auth/twitch/callback",
+  callbackURL: "/auth/twitch/callback",
   scope: "user_read"
 },
   function (accessToken, refreshToken, profile, done) {
@@ -104,6 +104,12 @@ app.post("/start", async (req, res) => {
   }
 });
 
+app.post("/stop", async (req, res) => {
+  var id = req.user.display_name;
+  await del_redis(`${id}`);
+  res.send({ "message": "Successfully deleted stream" });
+});
+
 const stringifyKey = fastJSON({
   title: 'Example Schema',
   type: 'object',
@@ -125,16 +131,6 @@ const stringifyKey = fastJSON({
 app.post("/update", async (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
-
-  // var orig = streams[id].subscribers[0];
-  // streams[id].subscribers = [];
-  // var temp = JSON.parse(JSON.stringify(orig));
-  // // temp.endpoint += Date.now();
-
-  // for (var i = 1; i < 10000; i++) {
-  //   streams[id].subscribers.push(temp);
-  // }
-  // streams[id].subscribers.push(orig);
 
   if (streams[id] == undefined) {
     res.status(404);
@@ -166,5 +162,22 @@ app.post("/subscribe", async (req, res) => {
   }
 });
 
-app.listen(8000);
+app.post("/spam", async (req, res) => {
+  var id = req.body.stream;
+  var key = req.body.credentials;
+  var amount = req.body.amount;
+  var redis_promises = [];
+  var og_endpoint = key.endpoint;
+  for (var i=0; i<amount; i++) {
+    key.endpoint = `${og_endpoint}${i}`;
+    redis_promises.push(sadd_redis(`${id}`, JSON.stringify(key)));
+  }
+  await Promise.all(redis_promises);
+  res.status(200);
+  res.send({
+    message: `Successfully subscribed ${amount} fake viewers.`
+  });
+});
+
+app.listen(process.env.PORT || 8000);
 console.log('Listening on port 8000');
