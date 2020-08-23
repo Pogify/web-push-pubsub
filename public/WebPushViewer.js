@@ -48,5 +48,40 @@ class WebPushViewer {
             });
         });
     }
+
+    subscribeUnique(callback, i) {
+        this.pipe.onmessage = d => {
+            callback(d.data);
+        };
+        return this.getServiceWorker().then(reg => {
+            return fetch("/vapid").then(r => r.text()).then(vapid => {
+                return reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: vapid
+                }).then((sub) => {
+                    sub = sub.toJSON();
+                    sub.endpoint += i;
+                    console.log("Subscribed to Web Push:", sub);
+                    return fetch("/subscribe", {
+                        method: "post",
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            stream: this.id,
+                            credentials: sub
+                        })
+                    }).then(r => r.json());
+                }).catch((e) => {
+                    if (Notification.permission === 'denied') {
+                        console.warn('Permission for notifications was denied');
+                    } else {
+                        console.error('Unable to subscribe to push', e);
+                    }
+                });
+            });
+        });
+    }
 }
 

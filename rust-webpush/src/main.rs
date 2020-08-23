@@ -100,13 +100,15 @@ async fn send_to_viewer(
     // btw, i think my sse is epico now
     // k
     match push_client.send(builder.build().unwrap()).await {
-        Ok(res) => Ok(()),
+        Ok(res) => {
+            println!("{}", viewer.endpoint);
+            Ok(())
+        },
         Err(e) => {
             // yeets the client if the client fails to connect
             create_redis_connection(&redis_client).unwrap().srem(id, serde_json::to_string(viewer)?).unwrap_or(());
             // e is the error
-            println!("Error: {} when sending to {}", e, viewer.endpoint);
-            // WebPushError is an enum, EndpointNotValid is one of its possible enum values
+            // println!("Error: {} when sending to {}", e, viewer.endpoint);
             Err(WebPushError::EndpointNotValid)
         }
     }
