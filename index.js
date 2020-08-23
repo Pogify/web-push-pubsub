@@ -1,5 +1,6 @@
 
 // use https://d3v.one/vapid-key-generator/
+// `${id}` makes sure that the object is a string
 
 const express = require('express');
 const app = express();
@@ -28,12 +29,14 @@ const client2 = redis.createClient();
 const client3 = redis.createClient();
 const client4 = redis.createClient();
 const client5 = redis.createClient();
+const client6 = redis.createClient();
 
 const del_redis = promisify(client1.del).bind(client1);
 const sadd_redis = promisify(client2.sadd).bind(client2);
 const pub_redis = promisify(client3.publish).bind(client3);
 const set_redis = promisify(client4.set).bind(client4);
 const get_redis = promisify(client5.get).bind(client5);
+const exists_redis = promisify(client6.exists).bind(client6);
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
@@ -91,7 +94,7 @@ var streams = {};
 app.post("/start", async (req, res) => {
   var id = req.user.display_name;
   var data = req.body.data;
-  if (streams[id] != undefined) {
+  if (await exists_redis(`${id}`)) {
     res.send({ message: "Successfully connected to existing stream" });
   } else {
     streams[id] = {
@@ -138,9 +141,7 @@ app.post("/update", async (req, res) => {
   } else {
     res.status(200);
     res.send({ message: "Successfully updated status" });
-    console.log(streams[id].subscribers.length + " subs");
 
-    var arr = streams[id].subscribers;
     await set_redis(`data:${id}`, JSON.stringify(data));
     await pub_redis("new data", `${id}`);
   }
@@ -153,7 +154,6 @@ app.post("/subscribe", async (req, res) => {
     res.status(404);
     res.send({ message: "Stream does not exist" });
   } else {
-    streams[id].subscribers.push(key);
     await sadd_redis(`${id}`, JSON.stringify(key));
     res.send({
       message: "Successfully subscribed user",
@@ -168,7 +168,7 @@ app.post("/spam", async (req, res) => {
   var amount = req.body.amount;
   var redis_promises = [];
   var og_endpoint = key.endpoint;
-  for (var i=0; i<amount; i++) {
+  for (var i = 0; i < amount; i++) {
     key.endpoint = `${og_endpoint}${i}`;
     redis_promises.push(sadd_redis(`${id}`, JSON.stringify(key)));
   }
