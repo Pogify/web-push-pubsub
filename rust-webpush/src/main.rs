@@ -1,3 +1,5 @@
+extern crate pretty_env_logger;
+
 extern crate redis;
 use redis::{Commands, RedisResult};
 
@@ -91,14 +93,23 @@ async fn send_to_viewer(
     builder.set_vapid_signature(signature);
 
     // If the send was successful, keep the user, else, yeet the user
-    let response = match push_client.send(builder.build().unwrap()).await {
+    // is 128 just not implemented or something 
+    // hmm, it seems that this encoding isn't there yea i don't thnk its been impl yet
+    // chrome for now ig
+    // imma look up if there is a way to use aesgcm instead in the browser when subbing
+    // btw, i think my sse is epico now
+    // k
+    match push_client.send(builder.build().unwrap()).await {
         Ok(res) => Ok(()),
         Err(e) => {
+            // yeets the client if the client fails to connect
             create_redis_connection(&redis_client).unwrap().srem(id, serde_json::to_string(viewer)?).unwrap_or(());
+            // e is the error
+            println!("Error: {} when sending to {}", e, viewer.endpoint);
+            // WebPushError is an enum, EndpointNotValid is one of its possible enum values
             Err(WebPushError::EndpointNotValid)
         }
-    };
-    response
+    }
 }
 
 
@@ -117,6 +128,7 @@ async fn push_to_all(id: String) -> RedisResult<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init();
     println!("Hello world");
     loop {
         match pubsub_stuff() {

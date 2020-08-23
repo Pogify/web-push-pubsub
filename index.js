@@ -33,7 +33,7 @@ const del_redis = promisify(client1.del).bind(client1);
 const sadd_redis = promisify(client2.sadd).bind(client2);
 const pub_redis = promisify(client3.publish).bind(client3);
 const set_redis = promisify(client4.set).bind(client4);
-const get_redis = promisify(client5.set).bind(client5);
+const get_redis = promisify(client5.get).bind(client5);
 
 webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 

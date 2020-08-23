@@ -26,6 +26,7 @@ class WebPushViewer {
                     userVisibleOnly: true,
                     applicationServerKey: vapid
                 }).then((sub) => {
+                    console.log("Subscribed to Web Push:", sub);
                     return fetch("/subscribe", {
                         method: "post",
                         headers: {
